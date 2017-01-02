@@ -1,0 +1,323 @@
+//////////////////////////////////////////////////////////////
+//1.这是一个字符转换并计算程序
+//3.字符式子中不能出现空格
+//4.支持加减乘除混合运算
+//2.支持式子中括号的优先级
+//5.只有整数，则结果为整数，计算时强制舍去小数部分
+//6.只要有小数点存在，则整个式子将进行浮点型运算
+//////////////////////////////////////////////////////////////
+#include "caculate.h"
+#include <stdio.h>
+
+
+void caculate(char* str)
+{
+	int flag;
+	static int	 int_num[120]={0};
+	static float float_num[120]={0};
+
+	printf("Input:%s\n",str);
+	flag=str_to_num(str,int_num,float_num);
+
+	if(0==flag)
+	{
+		caculate_int(int_num);
+		printf("The result:%d\n",int_num[0]);
+		printf("The result:%d\n",int_num[1]);
+		printf("The result:%d\n",int_num[2]);
+	}
+	else
+	{
+		caculate_float(float_num);
+		printf("The result:%f\n",float_num[0]);
+		printf("The result:%f\n",float_num[1]);
+	}
+}
+
+//*****************************str_to_num函数**********************************
+//输入时应避免空格的出现,否则会出错
+//返回1则为浮点型，返回0则为整形
+int str_to_num(char* char_p,int* int_p,float* float_p)
+{
+	char *p=char_p;
+	int  temp=0;
+	int   temp0=0;
+	float temp1=0;
+
+	int   if_float_flag=0;
+	float conversion_ratio=10;
+	int   if_visit_point=0;
+	
+	while(*p != 0)	//是否存在浮点型
+	{
+		if('.'==*p)
+		{
+			if_float_flag=1;
+			break;
+		}
+		p++;
+	}
+	
+	temp=*char_p;
+	while(temp!=0)
+	{
+		if((temp>=48)&&(temp<=57))
+		{
+			while(((temp>=48)&&(temp<=57))||('.'==temp))
+			{
+				if(0==if_float_flag)
+				{
+					temp0=temp0*10+temp-48;
+					char_p++;
+					temp=*char_p;
+				}
+				else
+				{
+					if('.'==temp)
+					{
+						if_visit_point=1;
+						char_p++;
+						temp=*char_p;
+					}
+
+					if(0==if_visit_point)
+					{
+						temp1=temp1*10+temp-48;
+					}
+					else
+					{
+						temp1=temp1+(float)(temp-48)/conversion_ratio;
+						conversion_ratio*=10;
+					}
+					char_p++;
+					temp=*char_p;
+				}
+			}
+			if(0==if_float_flag)
+			{
+				*int_p=temp0;
+				int_p++;
+				temp0=0;
+			}
+			else
+			{
+				*float_p=temp1;
+				float_p++;
+				conversion_ratio=10;
+				temp1=0;
+			}
+
+			if_visit_point=0;
+		}
+		else if(('+'==temp)||('-'==temp)||('*'==temp)||('/'==temp)||('('==temp)||(')'==temp))
+		{
+			if(0==if_float_flag)
+			{
+				*int_p=*char_p;
+				int_p++;
+				char_p++;
+				temp=*char_p;
+			}
+			else
+			{
+				*float_p=*char_p;
+				float_p++;
+				char_p++;
+				temp=*char_p;
+			}
+		}
+		else
+		{
+			char_p++;
+			temp=*char_p;
+		}
+	}
+
+	return if_float_flag;
+}
+//****************************************************************************
+void step_move_int(int step,int* temp_p)
+{
+	int i;
+	int temp;
+
+	for(i=0;i<step+1;i++)	temp_p++;
+	do		//移除运算后多余的符号及数据
+	{
+		temp=*temp_p;
+		for(i=0;i<step;i++)	temp_p--;
+		*temp_p=temp;
+		temp_p++;
+		temp=*temp_p;
+		for(i=0;i<step;i++)	temp_p++;
+	}while(temp != 0);
+}
+//****************************************************************************
+void step_move_float(int step,float* temp_p)
+{
+	int i;
+	float temp;
+
+	for(i=0;i<step+1;i++)	temp_p++;
+	do		//移除运算后多余的符号及数据
+	{
+		temp=*temp_p;
+		for(i=0;i<step;i++)	temp_p--;
+		*temp_p=temp;
+		temp_p++;
+		temp=*temp_p;
+		for(i=0;i<step;i++)	temp_p++;
+	}while(temp != 0);
+}
+//****************************************************************************
+void caculate_int(int* int_p)
+{
+	int  temp;
+	int* p_int=int_p;
+
+	while(*p_int != 0)	//是否存在(
+	{
+		if('('==*p_int)
+		{
+			p_int++;
+			caculate_int(p_int);
+			p_int--;
+			p_int--;
+			step_move_int(1,p_int);
+			break;
+		}
+		p_int++;
+	}
+
+	p_int=int_p;
+	while((*p_int != 0)&&(*p_int != ')'))
+	{
+		if('*'==*p_int)
+		{
+			p_int++;
+			temp=*p_int;
+			p_int--;
+			p_int--;
+			*p_int *= temp;
+			step_move_int(2,p_int);
+		}
+		if('/'==*p_int)
+		{
+			p_int++;
+			temp=*p_int;
+			p_int--;
+			p_int--;
+			*p_int /= temp;
+			step_move_int(2,p_int);
+		}
+
+		p_int++;
+	}
+
+	p_int=int_p;
+	while((*p_int != 0)&&(*p_int != ')'))
+	{
+		if('+'==*p_int)
+		{
+			p_int++;
+			temp=*p_int;
+			p_int--;
+			p_int--;
+			*p_int += temp;
+			step_move_int(2,p_int);
+		}
+		if('-'==*p_int)
+		{
+			p_int++;
+			temp=*p_int;
+			p_int--;
+			p_int--;
+			*p_int -= temp;
+			step_move_int(2,p_int);
+		}
+
+		p_int++;
+	}
+
+	if(*p_int == ')')
+	{
+		p_int--;
+		step_move_int(1,p_int);
+	}
+}
+//****************************************************************************
+void caculate_float(float* float_p)
+{
+	float temp;
+	float* p_float=float_p;
+
+	while(*p_float != 0)	//是否存在(
+	{
+		if('('==*p_float)
+		{
+			p_float++;
+			caculate_float(p_float);
+			p_float--;
+			p_float--;
+			step_move_float(1,p_float);
+			break;
+		}
+		p_float++;
+	}
+	
+	p_float=float_p;
+	while((*p_float != 0)&&(*p_float != ')'))
+	{
+		if('*'==*p_float)
+		{
+			p_float++;
+			temp=*p_float;
+			p_float--;
+			p_float--;
+			*p_float *= temp;
+			step_move_float(2,p_float);
+		}
+		if('/'==*p_float)
+		{
+			p_float++;
+			temp=*p_float;
+			p_float--;
+			p_float--;
+			*p_float /= temp;
+			step_move_float(2,p_float);
+		}
+
+		p_float++;
+	}
+	
+	p_float=float_p;
+	while((*p_float != 0)&&(*p_float != ')'))
+	{
+		if('+'==*p_float)
+		{
+			p_float++;
+			temp=*p_float;
+			p_float--;
+			p_float--;
+			*p_float += temp;
+			step_move_float(2,p_float);
+		}
+		if('-'==*p_float)
+		{
+			p_float++;
+			temp=*p_float;
+			p_float--;
+			p_float--;
+			*p_float -= temp;
+			step_move_float(2,p_float);
+		}
+
+		p_float++;
+	}
+
+	if(*p_float == ')')
+	{
+		p_float--;
+		step_move_float(1,p_float);
+	}
+}
